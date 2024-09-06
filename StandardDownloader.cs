@@ -98,36 +98,51 @@ namespace MonoTorrentSample
             }
 
             StringBuilder sb = new StringBuilder(1024);
+
             while (_engine.IsRunning)
             {
                 sb.Clear();
 
-                AppendFormat(sb, $"Transfer Rate:      {_engine.TotalDownloadRate / 1024.0:0.00}kB/sec ↓ / {_engine.TotalUploadRate / 1024.0:0.00}kB/sec ↑");
-                AppendFormat(sb, $"Memory Cache:       {_engine.DiskManager.CacheBytesUsed / 1024.0:0.00}/{_engine.Settings.DiskCacheBytes / 1024.0:0.00} kB");
-                AppendFormat(sb, $"Disk IO Rate:       {_engine.DiskManager.ReadRate / 1024.0:0.00} kB/s read / {_engine.DiskManager.WriteRate / 1024.0:0.00} kB/s write");
-                AppendFormat(sb, $"Disk IO Total:      {_engine.DiskManager.TotalBytesRead / 1024.0:0.00} kB read / {_engine.DiskManager.TotalBytesWritten / 1024.0:0.00} kB written");
-                AppendFormat(sb, $"Open Files:         {_engine.DiskManager.OpenFiles} / {_engine.DiskManager.MaximumOpenFiles}");
+                // Update and display system/engine information once per iteration
+                AppendFormat(sb,
+                    $"Transfer Rate:      {_engine.TotalDownloadRate / 1024.0:0.00}kB/sec ↓ / {_engine.TotalUploadRate / 1024.0:0.00}kB/sec ↑");
+                AppendFormat(sb,
+                    $"Memory Cache:       {_engine.DiskManager.CacheBytesUsed / 1024.0:0.00}/{_engine.Settings.DiskCacheBytes / 1024.0:0.00} kB");
+                AppendFormat(sb,
+                    $"Disk IO Rate:       {_engine.DiskManager.ReadRate / 1024.0:0.00} kB/s read / {_engine.DiskManager.WriteRate / 1024.0:0.00} kB/s write");
+                AppendFormat(sb,
+                    $"Disk IO Total:      {_engine.DiskManager.TotalBytesRead / 1024.0:0.00} kB read / {_engine.DiskManager.TotalBytesWritten / 1024.0:0.00} kB written");
+                AppendFormat(sb,
+                    $"Open Files:         {_engine.DiskManager.OpenFiles} / {_engine.DiskManager.MaximumOpenFiles}");
                 AppendFormat(sb, $"Open Connections:   {_engine.ConnectionManager.OpenConnections}");
                 AppendFormat(sb, $"DHT State:          {_engine.Dht.State}");
 
-                // Print out the port mappings
+                // Display port mappings
                 foreach (var mapping in _engine.PortMappings.Created)
-                    AppendFormat(sb, $"Successful Mapping    {mapping.PublicPort}:{mapping.PrivatePort} ({mapping.Protocol})");
+                    AppendFormat(sb,
+                        $"Successful Mapping    {mapping.PublicPort}:{mapping.PrivatePort} ({mapping.Protocol})");
                 foreach (var mapping in _engine.PortMappings.Failed)
-                    AppendFormat(sb, $"Failed mapping:       {mapping.PublicPort}:{mapping.PrivatePort} ({mapping.Protocol})");
+                    AppendFormat(sb,
+                        $"Failed mapping:       {mapping.PublicPort}:{mapping.PrivatePort} ({mapping.Protocol})");
                 foreach (var mapping in _engine.PortMappings.Pending)
-                    AppendFormat(sb, $"Pending mapping:      {mapping.PublicPort}:{mapping.PrivatePort} ({mapping.Protocol})");
+                    AppendFormat(sb,
+                        $"Pending mapping:      {mapping.PublicPort}:{mapping.PrivatePort} ({mapping.Protocol})");
 
+                // Loop through all torrent managers and print their information
                 foreach (TorrentManager manager in _engine.Torrents)
                 {
                     AppendSeparator(sb);
                     AppendFormat(sb, $"State:              {manager.State}");
-                    AppendFormat(sb, $"Name:               {(manager.Torrent == null ? "MetaDataMode" : manager.Torrent.Name)}");
+                    AppendFormat(sb,
+                        $"Name:               {(manager.Torrent == null ? "MetaDataMode" : manager.Torrent.Name)}");
                     AppendFormat(sb, $"Progress:           {manager.Progress:0.00}");
-                    AppendFormat(sb, $"Transferred:        {manager.Monitor.DataBytesReceived / 1024.0 / 1024.0:0.00} MB ↓ / {manager.Monitor.DataBytesSent / 1024.0 / 1024.0:0.00} MB ↑");
+                    AppendFormat(sb,
+                        $"Transferred:        {manager.Monitor.DataBytesReceived / 1024.0 / 1024.0:0.00} MB ↓ / {manager.Monitor.DataBytesSent / 1024.0 / 1024.0:0.00} MB ↑");
+
                     AppendFormat(sb, $"Tracker Status");
                     foreach (var tier in manager.TrackerManager.Tiers)
-                        AppendFormat(sb, $"\t{tier.ActiveTracker} : Announce Succeeded: {tier.LastAnnounceSucceeded}. Scrape Succeeded: {tier.LastScrapeSucceeded}.");
+                        AppendFormat(sb,
+                            $"\t{tier.ActiveTracker} : Announce Succeeded: {tier.LastAnnounceSucceeded}. Scrape Succeeded: {tier.LastScrapeSucceeded}.");
 
                     AppendFormat(sb, "Current Requests:   {0}", await manager.PieceManager.CurrentRequestCountAsync());
 
@@ -136,59 +151,64 @@ namespace MonoTorrentSample
                     foreach (PeerId p in peers.Where(t => t.ConnectionDirection == Direction.Outgoing))
                     {
                         AppendFormat(sb, "\t{2} - {1:0.00}/{3:0.00}kB/sec - {0} - {4} ({5})", p.Uri,
-                                                                                    p.Monitor.DownloadRate / 1024.0,
-                                                                                    p.AmRequestingPiecesCount,
-                                                                                    p.Monitor.UploadRate / 1024.0,
-                                                                                    p.EncryptionType);
+                            p.Monitor.DownloadRate / 1024.0,
+                            p.AmRequestingPiecesCount,
+                            p.Monitor.UploadRate / 1024.0,
+                            p.EncryptionType);
                     }
+
                     AppendFormat(sb, "");
                     AppendFormat(sb, "Incoming:");
                     foreach (PeerId p in peers.Where(t => t.ConnectionDirection == Direction.Incoming))
                     {
                         AppendFormat(sb, "\t{2} - {1:0.00}/{3:0.00}kB/sec - {0} - {4} ({5})", p.Uri,
-                                                                                    p.Monitor.DownloadRate / 1024.0,
-                                                                                    p.AmRequestingPiecesCount,
-                                                                                    p.Monitor.UploadRate / 1024.0,
-                                                                                    p.EncryptionType);
+                            p.Monitor.DownloadRate / 1024.0,
+                            p.AmRequestingPiecesCount,
+                            p.Monitor.UploadRate / 1024.0,
+                            p.EncryptionType);
                     }
 
-                    AppendFormat(sb, "", null);
                     if (manager.Torrent != null)
                         foreach (var file in manager.Files)
                             AppendFormat(sb, "{1:0.00}% - {0}", file.Path, file.BitField.PercentComplete);
                 }
+
+                // Clear and update the console
                 Console.Clear();
                 Console.WriteLine(sb.ToString());
+
+                // Export to listener if needed
                 lock (_listener)
                 {
                     _listener.ExportTo(Console.Out);
                 }
 
+                // Delay to avoid constant refresh
                 await Task.Delay(1000, cancellationToken);
             }
-        }
 
-        void Manager_PeersFound(object sender, PeersAddedEventArgs e)
-        {
-            lock (_listener)
-                _listener.WriteLine($"Found {e.NewPeers} new peers and {e.ExistingPeers} existing peers");//throw new Exception("The method or operation is not implemented.");
-        }
+            void Manager_PeersFound(object sender, PeersAddedEventArgs e)
+            {
+                lock (_listener)
+                    _listener.WriteLine($"Found {e.NewPeers} new peers and {e.ExistingPeers} existing peers");
+            }
 
-        void AppendSeparator(StringBuilder sb)
-        {
-            AppendFormat(sb, "");
-            AppendFormat(sb, "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
-            AppendFormat(sb, "");
-        }
+            void AppendSeparator(StringBuilder sb)
+            {
+                AppendFormat(sb, "");
+                AppendFormat(sb, "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
+                AppendFormat(sb, "");
+            }
 
-        void AppendFormat(StringBuilder sb, string str, params object[]? formatting)
-        {
-            if (formatting is { Length: > 0 })
-                sb.AppendFormat(str, formatting);
-            else
-                sb.Append(str);
+            void AppendFormat(StringBuilder sb, string str, params object[]? formatting)
+            {
+                if (formatting is { Length: > 0 })
+                    sb.AppendFormat(str, formatting);
+                else
+                    sb.Append(str);
 
-            sb.AppendLine();
+                sb.AppendLine();
+            }
         }
     }
 }
